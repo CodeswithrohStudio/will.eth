@@ -1,191 +1,346 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+
+/* ── Reveal-on-scroll hook ─────────────────────────────────────────────── */
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) el.classList.add('in-view'); },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+/* ── Animated stat counter ─────────────────────────────────────────────── */
+function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      obs.disconnect();
+      let start = 0;
+      const step = target / 80;
+      const id = setInterval(() => {
+        start += step;
+        if (start >= target) { setValue(target); clearInterval(id); }
+        else setValue(Math.floor(start));
+      }, 18);
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [target]);
+  return <span ref={ref}>{prefix}{value.toLocaleString()}{suffix}</span>;
+}
+
+/* ── Step card ─────────────────────────────────────────────────────────── */
+function StepCard({ num, label, title, body, accent = false }: {
+  num: string; label: string; title: string; body: string; accent?: boolean;
+}) {
+  return (
+    <div className={`card card-hover p-6 space-y-3 ${accent ? 'border-violet-600/40' : ''}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+          accent ? 'bg-violet-600 text-white' : 'bg-white/[0.06] text-zinc-400'
+        }`}>
+          {num}
+        </div>
+        <span className="text-xs font-semibold tracking-wider uppercase text-zinc-500">{label}</span>
+      </div>
+      <h3 className="text-[17px] font-semibold text-white leading-snug">{title}</h3>
+      <p className="text-sm text-zinc-400 leading-relaxed">{body}</p>
+    </div>
+  );
+}
 
 export default function LandingPage() {
+  const r1 = useReveal();
+  const r2 = useReveal();
+  const r3 = useReveal();
+  const r4 = useReveal();
+
   return (
     <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative overflow-hidden px-6 py-24 sm:py-32 lg:px-8">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-950 to-purple-950/30" />
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
+
+      {/* ── ACT 1: HERO ─────────────────────────────────────────────── */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-5 text-center overflow-hidden">
+
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden>
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] rounded-full bg-violet-700/10 blur-[120px]" />
+          <div className="absolute bottom-0 left-1/4 w-96 h-96 rounded-full bg-violet-900/8 blur-[100px]" />
         </div>
 
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-700/50 bg-purple-900/20 text-purple-300 text-sm mb-8">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-            Live on Base Sepolia
-          </div>
+        {/* Live badge */}
+        <div className="anim-fade-up d-100 mb-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] text-zinc-400 text-xs font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+          Live on Base — permissionless, forever
+        </div>
 
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tight text-white mb-6 leading-tight">
-            Your crypto.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-              Your legacy.
-            </span>
-          </h1>
+        {/* Main headline */}
+        <h1 className="anim-fade-up d-200 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white leading-[1.05] max-w-3xl">
+          Your crypto<br />
+          <span className="grad-text">dies with you.</span>
+        </h1>
 
-          <p className="text-xl text-gray-400 mb-4 max-w-2xl mx-auto leading-relaxed">
-            $140 billion in crypto is lost every year when people die without a plan.
-            Your family cannot access your wallet. There&apos;s no &ldquo;forgot password&rdquo; for a private key.
-          </p>
-          <p className="text-xl text-white mb-10 max-w-2xl mx-auto font-medium">
-            Will.eth fixes this. A dead man&apos;s switch for your crypto — no lawyer, no probate, no middleman.
-          </p>
+        <p className="anim-fade-up d-300 mt-7 text-lg sm:text-xl text-zinc-400 max-w-xl leading-relaxed">
+          There&apos;s no &ldquo;forgot password&rdquo; for a private key.
+          No lawyer who can unlock your wallet. No inheritance court for crypto.
+        </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/create"
-              className="px-8 py-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-lg transition-all hover:scale-105 active:scale-95 shadow-lg shadow-purple-900/40"
-            >
-              Create Your Will
-            </Link>
-            <Link
-              href="/dashboard"
-              className="px-8 py-4 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-semibold text-lg transition-all"
-            >
-              View Dashboard
-            </Link>
-          </div>
+        <p className="anim-fade-up d-400 mt-4 text-base sm:text-lg text-white/80 max-w-lg leading-relaxed font-medium">
+          will.eth is a dead man&apos;s switch on Base — it protects your family
+          automatically, with no middleman.
+        </p>
+
+        {/* CTAs */}
+        <div className="anim-fade-up d-500 mt-10 flex flex-col sm:flex-row gap-3 items-center">
+          <Link
+            href="/create"
+            className="px-8 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-[15px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-lg shadow-violet-900/40"
+          >
+            Set up your will — it&apos;s free
+          </Link>
+          <a
+            href="#how-it-works"
+            className="px-6 py-3.5 rounded-xl text-zinc-400 hover:text-white text-[15px] font-medium transition-colors"
+          >
+            See how it works ↓
+          </a>
+        </div>
+
+        {/* Scroll cue */}
+        <div className="anim-fade-in d-600 absolute bottom-10 left-1/2 -translate-x-1/2 text-zinc-600 text-xs animate-bounce select-none">
+          ↓
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-24 px-6 lg:px-8 border-t border-gray-800/50">
+      {/* ── ACT 2: THE PROBLEM ──────────────────────────────────────── */}
+      <section className="py-32 px-5">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-white mb-4">How it works</h2>
-          <p className="text-center text-gray-400 mb-16 max-w-xl mx-auto">
-            Set it up once. Check in monthly. Your heirs are protected forever.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-            {[
-              {
-                step: '01',
-                icon: '📝',
-                title: 'Create your will',
-                desc: 'Assign percentages to ENS names. alice.eth gets 60%. mum.will.eth gets 40%. Human-readable. Onchain.',
-              },
-              {
-                step: '→',
-                icon: null,
-                title: null,
-                desc: null,
-                arrow: true,
-              },
-              {
-                step: '02',
-                icon: '💬',
-                title: 'Monthly check-in',
-                desc: 'Tap a button in the app OR reply "ALIVE" to a WhatsApp message. Takes 5 seconds.',
-              },
-              {
-                step: '→',
-                icon: null,
-                title: null,
-                desc: null,
-                arrow: true,
-              },
-              {
-                step: '03',
-                icon: '⚡',
-                title: 'Miss two check-ins',
-                desc: 'The contract assumes incapacitation. Time-locked distribution triggers automatically.',
-              },
-            ].map((item, i) => (
-              item.arrow ? (
-                <div key={i} className="hidden md:flex justify-center text-2xl text-gray-600">→</div>
-              ) : (
-                <div key={i} className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6">
-                  <div className="text-xs font-bold text-purple-400 mb-3">{item.step}</div>
-                  <div className="text-3xl mb-3">{item.icon}</div>
-                  <h3 className="font-semibold text-white mb-2">{item.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
-                </div>
-              )
-            ))}
+          <div ref={r1} className="reveal text-center mb-20">
+            <div className="text-7xl sm:text-8xl md:text-9xl font-black text-white tracking-tight num">
+              $<Counter target={140} />B
+            </div>
+            <p className="mt-4 text-zinc-400 text-lg">
+              in crypto lost every year — to death, lost keys, and no plan.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6">
-              <div className="text-xs font-bold text-purple-400 mb-3">04</div>
-              <div className="text-3xl mb-3">🔐</div>
-              <h3 className="font-semibold text-white mb-2">Heirs claim with ZK proof</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Beneficiaries use Anon Aadhaar to prove they&apos;re real verified humans — without revealing any personal data. No KYC, no courts, no documents.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6">
-              <div className="text-xs font-bold text-green-400 mb-3">BONUS</div>
-              <div className="text-3xl mb-3">📈</div>
-              <h3 className="font-semibold text-white mb-2">Your estate earns yield</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                While you&apos;re alive, idle funds earn 5% APY in a Morpho/Aave vault. Death becomes a DeFi position — your heirs receive more than you locked in.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-16 px-6 border-t border-gray-800/50 bg-gray-900/30">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { value: '$140B+', label: 'Lost annually to death/lost keys' },
-            { value: '0', label: 'Lawyers required' },
-            { value: '5%', label: 'APY on idle assets' },
-            { value: '∞', label: 'Borders it works across' },
-          ].map(stat => (
-            <div key={stat.label}>
-              <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-              <div className="text-sm text-gray-400">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Tech Stack */}
-      <section className="py-24 px-6 lg:px-8 border-t border-gray-800/50">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-12">Built with the best</h2>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div ref={r2} className="reveal grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { name: 'Base', desc: 'L2 execution' },
-              { name: 'Anon Aadhaar', desc: 'ZK identity' },
-              { name: 'ENS', desc: 'Human-readable heirs' },
-              { name: 'Fileverse', desc: 'Encrypted documents' },
-              { name: 'Morpho', desc: 'Yield on assets' },
-              { name: 'WhatsApp AI', desc: 'Non-crypto check-ins' },
-            ].map(tech => (
-              <div
-                key={tech.name}
-                className="px-4 py-3 rounded-xl border border-gray-700 bg-gray-900/50"
-              >
-                <div className="font-semibold text-white text-sm">{tech.name}</div>
-                <div className="text-xs text-gray-500">{tech.desc}</div>
+              {
+                icon: '🔑',
+                problem: 'No key, no coins.',
+                body: 'Your private key is in your head. When you\'re gone, so is your wallet — permanently.',
+              },
+              {
+                icon: '⚖️',
+                problem: 'Probate can\'t touch crypto.',
+                body: 'A judge can transfer a house. They cannot transfer ETH. The legal system was built before the blockchain.',
+              },
+              {
+                icon: '😢',
+                problem: 'Your family pays the price.',
+                body: 'Not you — them. Grieving while watching a life\'s savings sit forever unreachable.',
+              },
+            ].map(item => (
+              <div key={item.problem} className="card p-6 space-y-3">
+                <div className="text-3xl">{item.icon}</div>
+                <h3 className="text-[16px] font-semibold text-white">{item.problem}</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed">{item.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 px-6 border-t border-gray-800/50">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Don&apos;t let your crypto die with you.
-          </h2>
-          <p className="text-gray-400 mb-8 text-lg">
-            Set up your will in under 5 minutes. Your family will thank you.
-          </p>
-          <Link
-            href="/create"
-            className="inline-flex px-10 py-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xl transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-purple-900/50"
-          >
-            Create Your Will Now
-          </Link>
-          <p className="mt-4 text-sm text-gray-600">Free. Permissionless. Onchain forever.</p>
+      {/* ── ACT 3: HOW IT WORKS ─────────────────────────────────────── */}
+      <section id="how-it-works" className="py-32 px-5 border-t border-white/[0.04]">
+        <div className="max-w-5xl mx-auto">
+
+          <div ref={r3} className="reveal text-center mb-16">
+            <p className="text-xs font-semibold tracking-wider uppercase text-violet-400 mb-3">How it works</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Set it once. It runs forever.
+            </h2>
+            <p className="mt-4 text-zinc-400 max-w-lg mx-auto">
+              Think of it like a heartbeat monitor for your wallet.
+              You tap a button monthly. If you stop — your heirs get everything automatically.
+            </p>
+          </div>
+
+          {/* Timeline */}
+          <div className="space-y-3">
+
+            {/* Today */}
+            <div className="flex gap-4 sm:gap-8 items-start">
+              <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
+                <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center text-white font-bold text-sm">1</div>
+                <div className="w-px flex-1 bg-white/[0.06] min-h-[40px]" />
+              </div>
+              <div className="card card-hover p-5 flex-1 mb-3">
+                <div className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-1">Today</div>
+                <h3 className="text-[16px] font-semibold text-white mb-1">You write your will</h3>
+                <p className="text-sm text-zinc-400">Enter ENS names or wallet addresses. Set percentages. Deploy to Base in under 5 minutes.</p>
+              </div>
+            </div>
+
+            {/* Every month */}
+            <div className="flex gap-4 sm:gap-8 items-start">
+              <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
+                <div className="w-9 h-9 rounded-xl bg-white/[0.07] flex items-center justify-center text-white font-bold text-sm">2</div>
+                <div className="w-px flex-1 bg-white/[0.06] min-h-[40px]" />
+              </div>
+              <div className="card card-hover p-5 flex-1 mb-3">
+                <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Every month</div>
+                <h3 className="text-[16px] font-semibold text-white mb-1">You check in — takes 5 seconds</h3>
+                <p className="text-sm text-zinc-400">Tap the button in the app. Or reply &ldquo;ALIVE&rdquo; to a WhatsApp message. The contract resets. Your family stays protected.</p>
+              </div>
+            </div>
+
+            {/* If the worst happens */}
+            <div className="flex gap-4 sm:gap-8 items-start">
+              <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
+                <div className="w-9 h-9 rounded-xl bg-white/[0.07] flex items-center justify-center text-white font-bold text-sm">3</div>
+              </div>
+              <div className="card p-5 flex-1 border-emerald-700/30">
+                <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-1">When it matters most</div>
+                <h3 className="text-[16px] font-semibold text-white mb-1">Your heirs receive everything</h3>
+                <p className="text-sm text-zinc-400">If you miss two check-ins, any heir can trigger the contract. They verify identity privately with a ZK proof — no courts, no KYC, no waiting.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* ── ACT 4: YIELD ────────────────────────────────────────────── */}
+      <section className="py-32 px-5 border-t border-white/[0.04]">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+
+            <div ref={r4} className="reveal space-y-5">
+              <p className="text-xs font-semibold tracking-wider uppercase text-violet-400">While you&apos;re alive</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-snug">
+                Your estate grows<br />while you sleep.
+              </h2>
+              <p className="text-zinc-400 leading-relaxed">
+                Idle funds deposited into your will earn real yield on Base via YO Protocol.
+                When the time comes, your heirs receive <span className="text-white font-semibold">more than you locked in</span>.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { label: '7.2% APY on USDC', sub: 'Stable, USD-denominated yield' },
+                  { label: '4.8% APY on ETH', sub: 'Denominated in native ETH' },
+                  { label: 'Non-custodial', sub: 'Your keys. Your vault. Always.' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-start gap-3">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">{item.label}</div>
+                      <div className="text-xs text-zinc-500">{item.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2">
+                <span className="text-xs text-zinc-600">Powered by</span>
+                <span className="ml-2 text-xs font-semibold text-zinc-400">YO Protocol · Base</span>
+              </div>
+            </div>
+
+            {/* Compound illustration */}
+            <div className="card p-6 space-y-4">
+              <div className="text-sm font-semibold text-white mb-1">If you deposit $10,000 today</div>
+              <div className="space-y-3">
+                {[
+                  { years: 5,  val: 14185,  bar: 28 },
+                  { years: 10, val: 20122,  bar: 52 },
+                  { years: 20, val: 40545,  bar: 80 },
+                  { years: 35, val: 115231, bar: 100 },
+                ].map(row => (
+                  <div key={row.years} className="space-y-1">
+                    <div className="flex justify-between text-xs text-zinc-400">
+                      <span>In {row.years} years</span>
+                      <span className="text-emerald-400 font-semibold num">${row.val.toLocaleString()}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-600 to-emerald-500"
+                        style={{ width: `${row.bar}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-600 pt-2">@ 7.2% APY (USDC) compounded annually. Not financial advice.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ACT 5: TECH / TRUST ─────────────────────────────────────── */}
+      <section className="py-24 px-5 border-t border-white/[0.04]">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs font-semibold tracking-wider uppercase text-zinc-500 mb-8">Built on infrastructure you can trust</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              { name: 'Base', badge: 'L2 execution' },
+              { name: 'Anon Aadhaar', badge: 'ZK identity' },
+              { name: 'ENS', badge: 'Human-readable heirs' },
+              { name: 'YO Protocol', badge: 'Yield on Base' },
+              { name: 'Fileverse', badge: 'Encrypted docs' },
+              { name: 'WhatsApp', badge: 'Non-crypto check-ins' },
+            ].map(t => (
+              <div key={t.name} className="px-4 py-2.5 rounded-xl card flex flex-col items-center gap-0.5">
+                <div className="text-sm font-semibold text-white">{t.name}</div>
+                <div className="text-xs text-zinc-500">{t.badge}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ACT 6: FINAL CTA ────────────────────────────────────────── */}
+      <section className="py-32 px-5 border-t border-white/[0.04]">
+        <div className="max-w-2xl mx-auto text-center space-y-6">
+          <h2 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
+            Don&apos;t let your crypto<br />
+            <span className="grad-text">die with you.</span>
+          </h2>
+          <p className="text-zinc-400 text-lg">
+            Five minutes today protects your family forever.
+          </p>
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/create"
+              className="px-10 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-[16px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-2xl shadow-violet-900/50"
+            >
+              Create Your Will — Free
+            </Link>
+            <Link
+              href="/dashboard"
+              className="px-8 py-4 rounded-xl border border-white/[0.08] text-zinc-400 hover:text-white font-medium text-[16px] transition-colors"
+            >
+              View Dashboard
+            </Link>
+          </div>
+          <p className="text-xs text-zinc-600 pt-2">Permissionless · Open source · Onchain forever</p>
+        </div>
+      </section>
+
     </div>
   );
 }
