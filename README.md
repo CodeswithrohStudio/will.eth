@@ -4,8 +4,6 @@
 
 $140B in crypto is lost every year when people die without a plan. There's no "forgot password" for a private key, and no probate court that can unlock a wallet. will.eth fixes this: set up your will once, check in monthly, and your heirs receive everything automatically if you stop.
 
-**Live on Base Sepolia →** [willeth.xyz](https://willeth.xyz)
-
 ---
 
 ## How it works
