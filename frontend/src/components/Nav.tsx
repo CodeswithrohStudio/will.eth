@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { usePathname } from 'next/navigation';
 
@@ -23,9 +24,13 @@ export default function Nav() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-green-900/40 group-hover:bg-green-400 transition-colors">
-              W
-            </div>
+            <Image
+              src="/logo.svg"
+              alt="will.eth logo"
+              width={28}
+              height={28}
+              className="opacity-90 group-hover:opacity-100 transition-opacity"
+            />
             <span className="font-semibold text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
               will.eth
             </span>
