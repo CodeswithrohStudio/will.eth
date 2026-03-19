@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
-import { mainnet } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 
+// ENS names resolve against Ethereum Sepolia (testnet)
 const client = createPublicClient({
-  chain: mainnet,
-  transport: http('https://eth.llamarpc.com'),
+  chain: sepolia,
+  transport: http('https://rpc.ankr.com/eth_sepolia'),
 });
 
 export async function GET(req: NextRequest) {

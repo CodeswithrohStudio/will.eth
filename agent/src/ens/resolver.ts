@@ -1,9 +1,10 @@
 import { createPublicClient, http } from 'viem';
-import { mainnet } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 
+// Resolve ENS against Ethereum Sepolia for testnet
 const client = createPublicClient({
-  chain: mainnet,
-  transport: http('https://eth.llamarpc.com'),
+  chain: sepolia,
+  transport: http('https://rpc.ankr.com/eth_sepolia'),
 });
 
 export async function resolveENSName(name: string): Promise<string | null> {
