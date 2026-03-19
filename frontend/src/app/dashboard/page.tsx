@@ -8,6 +8,7 @@ import { useTestatorWills } from '@/hooks/useWillRegistry';
 import { useWillState, useCheckIn, useTrigger, useDepositETH, useRevoke } from '@/hooks/useWill';
 import { WillState, WILL_STATE_LABELS, WILL_STATE_COLORS } from '@/lib/types';
 import { formatDaysRemaining, bpsToPercent, shortenAddress } from '@/lib/utils';
+import { YOWillDashboard } from '@/components/YOWillDashboard';
 import Link from 'next/link';
 
 function WillCard({ willAddress }: { willAddress: `0x${string}` }) {
@@ -195,6 +196,13 @@ function WillCard({ willAddress }: { willAddress: `0x${string}` }) {
           </button>
         )}
       </div>
+
+      {/* YO Protocol yield dashboard */}
+      {(state === WillState.ACTIVE || state === WillState.TRIGGERABLE) && (
+        <div className="mt-1">
+          <YOWillDashboard willAddress={willAddress} />
+        </div>
+      )}
     </div>
   );
 }

@@ -5,11 +5,15 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IYieldVault} from "./interfaces/IYieldVault.sol";
+import {IYOVault} from "./interfaces/IYOVault.sol";
 import {IAnonAadhaar} from "./interfaces/IAnonAadhaar.sol";
 
 /// @title Will
 /// @notice Dead man's switch crypto inheritance contract
-/// @dev Deploy via WillRegistry. Testator must check in periodically or assets flow to heirs.
+/// @dev Supports ETH (via IYieldVault) and USDC (via YO Protocol ERC-4626 vaults).
+///      YO vault on Base mainnet:
+///        yoUSD: 0x0000000f2eb9f69274678c76222b35eec7588a65
+///        yoETH: 0x3a43aec53490cb9fa922847385d82fe25d0e9de7
 contract Will is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -30,22 +34,41 @@ contract Will is ReentrancyGuard {
         uint256 nullifierUsed;
     }
 
+    /// @notice Tracks a USDC position in a YO Protocol vault
+    struct YOPosition {
+        address vaultAddress;   // YO vault address (e.g. yoUSD on Base)
+        uint256 sharesHeld;     // yoTokens held by this contract
+        uint256 principalUSDC;  // Original USDC deposited (6 decimals)
+        uint64  depositedAt;    // Timestamp of first deposit
+    }
+
     // ─── Immutables ───────────────────────────────────────────────────────
     address public immutable testator;
     address public immutable registry;
-    IYieldVault public immutable yieldVault;
+    IYieldVault public immutable yieldVault;    // ETH yield vault (legacy / testnet mock)
     IAnonAadhaar public immutable anonAadhaar;
+    IERC20 public immutable usdc;               // USDC token contract
 
     // ─── Config ───────────────────────────────────────────────────────────
     uint256 public checkInInterval;
     string  public fileverseDocId;
 
+    // ─── Guardian ─────────────────────────────────────────────────────────
+    address public guardian;
+    uint256 public guardianRedeemUnlocksAt;     // 0 = no pending redeem
+
+    uint256 private constant GUARDIAN_TIMELOCK = 48 hours;
+
+    // ─── YO Protocol Position ─────────────────────────────────────────────
+    YOPosition public yoPosition;
+
     // ─── State ────────────────────────────────────────────────────────────
     WillState public state;
     uint256   public lastCheckIn;
     uint256   public triggerTimestamp;
-    uint256   public depositedShares;
+    uint256   public depositedShares;               // ETH vault shares
     uint256   public ethBalanceAtDistribution;
+    uint256   public usdcBalanceAtDistribution;     // USDC (principal + yield) at trigger
 
     Beneficiary[] public beneficiaries;
     mapping(uint256 => bool) public usedNullifiers;
@@ -54,10 +77,15 @@ contract Will is ReentrancyGuard {
 
     // ─── Events ───────────────────────────────────────────────────────────
     event CheckedIn(address indexed testator, uint256 timestamp, uint256 nextDeadline);
-    event WillTriggered(address indexed triggeredBy, uint256 timestamp, uint256 totalValue);
-    event Claimed(address indexed beneficiary, uint256 ethAmount, uint256 timestamp);
-    event FundsDeposited(address indexed depositor, uint256 ethAmount, uint256 shares);
-    event WillRevoked(address indexed testator, uint256 ethReturned, uint256 timestamp);
+    event WillTriggered(address indexed triggeredBy, uint256 timestamp, uint256 ethTotal, uint256 usdcTotal);
+    event Claimed(address indexed beneficiary, uint256 ethAmount, uint256 usdcAmount, uint256 timestamp);
+    event ETHDeposited(address indexed depositor, uint256 ethAmount, uint256 shares);
+    event USDCDepositedToYO(address indexed depositor, address yoVault, uint256 usdcAmount, uint256 yoShares);
+    event YORedeemed(address yoVault, uint256 shares, uint256 usdcReturned);
+    event WillRevoked(address indexed testator, uint256 ethReturned, uint256 usdcReturned, uint256 timestamp);
+    event GuardianSet(address indexed guardian);
+    event GuardianRedeemInitiated(address indexed guardian, uint256 unlocksAt);
+    event GuardianRedeemed(address indexed guardian, uint256 usdcReturned);
     event CheckInIntervalUpdated(uint256 oldInterval, uint256 newInterval);
     event FileverseDocUpdated(string newDocId);
 
@@ -77,12 +105,18 @@ contract Will is ReentrancyGuard {
         _;
     }
 
+    modifier onlyGuardian() {
+        require(msg.sender == guardian, "Will: not guardian");
+        _;
+    }
+
     // ─── Constructor ──────────────────────────────────────────────────────
     constructor(
         address _testator,
         address _registry,
         address _yieldVault,
         address _anonAadhaar,
+        address _usdc,
         address[] memory _beneficiaries,
         string[] memory _ensNames,
         uint256[] memory _basisPoints,
@@ -95,7 +129,6 @@ contract Will is ReentrancyGuard {
         require(_beneficiaries.length == _basisPoints.length, "Will: array mismatch");
         require(_checkInInterval >= 1 days, "Will: interval too short");
 
-        // Validate basis points sum to 10000
         uint256 totalBps;
         for (uint256 i = 0; i < _basisPoints.length; i++) {
             totalBps += _basisPoints[i];
@@ -106,6 +139,7 @@ contract Will is ReentrancyGuard {
         registry = _registry;
         yieldVault = IYieldVault(_yieldVault);
         anonAadhaar = IAnonAadhaar(_anonAadhaar);
+        usdc = IERC20(_usdc); // may be address(0) when USDC path is unused
         checkInInterval = _checkInInterval;
         fileverseDocId = _fileverseDocId;
         lastCheckIn = block.timestamp;
@@ -126,13 +160,15 @@ contract Will is ReentrancyGuard {
         }
     }
 
-    // ─── Core Functions ───────────────────────────────────────────────────
+    // ─── Core: Check-In ───────────────────────────────────────────────────
 
     /// @notice Testator proves they are alive
     function checkIn() external onlyTestator onlyActive {
         lastCheckIn = block.timestamp;
         emit CheckedIn(testator, block.timestamp, block.timestamp + checkInInterval);
     }
+
+    // ─── Core: Trigger ────────────────────────────────────────────────────
 
     /// @notice Anyone can call when check-in is overdue — starts distribution
     function trigger() external nonReentrant {
@@ -148,26 +184,36 @@ contract Will is ReentrancyGuard {
         state = WillState.DISTRIBUTING;
         triggerTimestamp = block.timestamp;
 
-        // Withdraw all funds from yield vault
-        uint256 withdrawn = 0;
+        // 1. Withdraw ETH from legacy yield vault
         if (depositedShares > 0) {
-            try yieldVault.withdraw(depositedShares) returns (uint256 assets) {
-                withdrawn = assets;
-            } catch {
-                // Vault withdrawal failed — distribute whatever is in the contract
-            }
+            try yieldVault.withdraw(depositedShares) returns (uint256) {}
+            catch {}
             depositedShares = 0;
         }
-
         ethBalanceAtDistribution = address(this).balance;
-        emit WillTriggered(msg.sender, block.timestamp, ethBalanceAtDistribution);
+
+        // 2. Redeem USDC from YO vault (principal + all accrued yield)
+        if (yoPosition.sharesHeld > 0) {
+            address yoAddr = yoPosition.vaultAddress;
+            uint256 shares = yoPosition.sharesHeld;
+            yoPosition.sharesHeld = 0;
+
+            try IYOVault(yoAddr).redeem(shares, address(this), address(this)) returns (uint256 usdcReturned) {
+                emit YORedeemed(yoAddr, shares, usdcReturned);
+            } catch {}
+        }
+        usdcBalanceAtDistribution = _hasUSDC() ? usdc.balanceOf(address(this)) : 0;
+
+        emit WillTriggered(msg.sender, block.timestamp, ethBalanceAtDistribution, usdcBalanceAtDistribution);
     }
 
-    /// @notice Beneficiary claims their share using Anon Aadhaar ZK proof
-    /// @param nullifierSeed Must equal uint256(address(this)) — binds proof to this will
-    /// @param nullifier     Unique nullifier from Anon Aadhaar
-    /// @param timestamp     Proof generation timestamp (must be < 24h old)
-    /// @param groth16Proof  ZK proof bytes [a0, a1, b00, b01, b10, b11, c0, c1]
+    // ─── Core: Claim ──────────────────────────────────────────────────────
+
+    /// @notice Beneficiary claims their share (ETH + USDC) using Anon Aadhaar ZK proof
+    /// @param nullifierSeed  Must equal uint256(address(this)) — binds proof to this will
+    /// @param nullifier      Unique nullifier from Anon Aadhaar
+    /// @param timestamp      Proof generation timestamp (must be < 24h old)
+    /// @param groth16Proof   ZK proof bytes [a0, a1, b00, b01, b10, b11, c0, c1]
     function claim(
         uint256 nullifierSeed,
         uint256 nullifier,
@@ -183,74 +229,173 @@ contract Will is ReentrancyGuard {
             "Will: wrong nullifier seed"
         );
 
-        // Verify Anon Aadhaar ZK proof
         bool valid = anonAadhaar.verifyAnonAadhaarProof(
             nullifierSeed,
             nullifier,
             timestamp,
-            uint256(uint160(msg.sender)), // signal = claimer address
-            [uint256(0), uint256(0), uint256(0), uint256(0)], // no reveals needed
+            uint256(uint160(msg.sender)),
+            [uint256(0), uint256(0), uint256(0), uint256(0)],
             groth16Proof
         );
         require(valid, "Will: invalid ZK proof");
 
-        // Mark as claimed
         usedNullifiers[nullifier] = true;
         beneficiaries[idx].hasClaimed = true;
         beneficiaries[idx].nullifierUsed = nullifier;
 
-        // Calculate share
-        uint256 share = (ethBalanceAtDistribution * beneficiaries[idx].basisPoints) / 10000;
-        uint256 available = address(this).balance;
-        uint256 toSend = share > available ? available : share;
+        uint256 bps = beneficiaries[idx].basisPoints;
 
-        if (toSend > 0) {
-            (bool success,) = payable(msg.sender).call{value: toSend}("");
-            require(success, "Will: transfer failed");
+        // ETH share
+        uint256 ethShare = (ethBalanceAtDistribution * bps) / 10000;
+        uint256 ethAvail = address(this).balance;
+        uint256 ethToSend = ethShare > ethAvail ? ethAvail : ethShare;
+        if (ethToSend > 0) {
+            (bool ok,) = payable(msg.sender).call{value: ethToSend}("");
+            require(ok, "Will: ETH transfer failed");
         }
 
-        emit Claimed(msg.sender, toSend, block.timestamp);
+        // USDC share (principal + all YO yield)
+        uint256 usdcToSend = 0;
+        if (_hasUSDC() && usdcBalanceAtDistribution > 0) {
+            uint256 usdcShare = (usdcBalanceAtDistribution * bps) / 10000;
+            uint256 usdcAvail = usdc.balanceOf(address(this));
+            usdcToSend = usdcShare > usdcAvail ? usdcAvail : usdcShare;
+            if (usdcToSend > 0) usdc.safeTransfer(msg.sender, usdcToSend);
+        }
+
+        emit Claimed(msg.sender, ethToSend, usdcToSend, block.timestamp);
     }
 
-    /// @notice Deposit ETH into yield vault
+    // ─── Deposits ─────────────────────────────────────────────────────────
+
+    /// @notice Deposit ETH into the legacy yield vault (ETH path)
     function depositETH() external payable onlyTestator {
         require(msg.value > 0, "Will: zero deposit");
-        require(
-            state == WillState.ACTIVE || state == WillState.TRIGGERABLE,
-            "Will: cannot deposit"
-        );
+        require(state == WillState.ACTIVE || state == WillState.TRIGGERABLE, "Will: cannot deposit");
 
         uint256 shares = yieldVault.deposit{value: msg.value}(msg.value);
         depositedShares += shares;
 
-        emit FundsDeposited(msg.sender, msg.value, shares);
+        emit ETHDeposited(msg.sender, msg.value, shares);
     }
 
-    /// @notice Emergency cancel — testator withdraws all funds and revokes will
+    /// @notice Deposit USDC into a YO Protocol vault — the yield layer
+    /// @param yoVaultAddress  YO vault on Base (yoUSD: 0x0000000f..., yoETH: 0x3a43aec5...)
+    /// @param usdcAmount      Amount of USDC (6 decimals) to deposit
+    /// @dev Testator must approve(willAddress, usdcAmount) on USDC contract first
+    function depositUSDCToYO(address yoVaultAddress, uint256 usdcAmount) external onlyTestator nonReentrant {
+        require(_hasUSDC(), "Will: USDC not configured");
+        require(usdcAmount > 0, "Will: zero amount");
+        require(yoVaultAddress != address(0), "Will: zero vault");
+        require(state == WillState.ACTIVE || state == WillState.TRIGGERABLE, "Will: cannot deposit");
+        require(
+            yoPosition.vaultAddress == address(0) || yoPosition.vaultAddress == yoVaultAddress,
+            "Will: vault mismatch, revoke to switch vaults"
+        );
+
+        // Pull USDC from testator into this contract
+        usdc.safeTransferFrom(msg.sender, address(this), usdcAmount);
+
+        // Approve YO vault to spend our USDC
+        usdc.forceApprove(yoVaultAddress, usdcAmount);
+
+        // Deposit into YO vault → receive yoTokens (shares)
+        uint256 sharesReceived = IYOVault(yoVaultAddress).deposit(usdcAmount, address(this));
+
+        // Track position
+        yoPosition.vaultAddress = yoVaultAddress;
+        yoPosition.sharesHeld += sharesReceived;
+        yoPosition.principalUSDC += usdcAmount;
+        if (yoPosition.depositedAt == 0) {
+            yoPosition.depositedAt = uint64(block.timestamp);
+        }
+
+        emit USDCDepositedToYO(msg.sender, yoVaultAddress, usdcAmount, sharesReceived);
+    }
+
+    // ─── Revoke ───────────────────────────────────────────────────────────
+
+    /// @notice Testator cancels the will — all funds returned
     function revoke() external onlyTestator nonReentrant {
         require(state == WillState.ACTIVE || state == WillState.TRIGGERABLE, "Will: cannot revoke");
 
         state = WillState.REVOKED;
 
-        // Withdraw from vault
-        uint256 withdrawn = 0;
+        // Withdraw ETH from legacy vault
         if (depositedShares > 0) {
-            try yieldVault.withdraw(depositedShares) returns (uint256 assets) {
-                withdrawn = assets;
-            } catch {}
+            try yieldVault.withdraw(depositedShares) returns (uint256) {}
+            catch {}
             depositedShares = 0;
         }
 
-        uint256 balance = address(this).balance;
-        if (balance > 0) {
-            (bool success,) = payable(testator).call{value: balance}("");
-            require(success, "Will: revoke transfer failed");
+        // Redeem USDC from YO vault back to testator
+        if (yoPosition.sharesHeld > 0) {
+            try IYOVault(yoPosition.vaultAddress).redeem(
+                yoPosition.sharesHeld, testator, address(this)
+            ) returns (uint256 returned) {
+                emit YORedeemed(yoPosition.vaultAddress, yoPosition.sharesHeld, returned);
+            } catch {}
+            yoPosition.sharesHeld = 0;
         }
 
-        emit WillRevoked(testator, balance, block.timestamp);
+        // Return any remaining USDC (edge case)
+        uint256 usdcBal = 0;
+        if (_hasUSDC()) {
+            usdcBal = usdc.balanceOf(address(this));
+            if (usdcBal > 0) usdc.safeTransfer(testator, usdcBal);
+        }
+
+        // Return ETH
+        uint256 ethBal = address(this).balance;
+        emit WillRevoked(testator, ethBal, usdcBal, block.timestamp);
+        if (ethBal > 0) {
+            (bool ok,) = payable(testator).call{value: ethBal}("");
+            require(ok, "Will: revoke ETH failed");
+        }
     }
 
-    /// @notice Update check-in interval (only testator, only when active)
+    // ─── Guardian Emergency Redeem ────────────────────────────────────────
+
+    /// @notice Testator designates a trusted guardian
+    function setGuardian(address _guardian) external onlyTestator {
+        require(_guardian != address(0), "Will: zero guardian");
+        guardian = _guardian;
+        emit GuardianSet(_guardian);
+    }
+
+    /// @notice Guardian initiates emergency redeem — starts 48h timelock
+    /// @dev Only available during ACTIVE state (can't compete with trigger)
+    function initiateGuardianRedeem() external onlyGuardian {
+        require(yoPosition.sharesHeld > 0, "Will: no YO position");
+        require(guardianRedeemUnlocksAt == 0, "Will: redeem already pending");
+        require(state == WillState.ACTIVE, "Will: only during active state");
+
+        guardianRedeemUnlocksAt = block.timestamp + GUARDIAN_TIMELOCK;
+        emit GuardianRedeemInitiated(guardian, guardianRedeemUnlocksAt);
+    }
+
+    /// @notice Guardian executes redeem after 48h timelock expires
+    /// @dev Principal + yield is returned to testator. Yield is included
+    ///      as a full redemption; partial principal-only redemption would
+    ///      require the vault to support it (out of scope for current YO spec).
+    function executeGuardianRedeem() external onlyGuardian nonReentrant {
+        require(guardianRedeemUnlocksAt > 0, "Will: no pending redeem");
+        require(block.timestamp >= guardianRedeemUnlocksAt, "Will: timelock active");
+        require(yoPosition.sharesHeld > 0, "Will: no shares");
+
+        uint256 sharesToRedeem = yoPosition.sharesHeld;
+        yoPosition.sharesHeld = 0;
+        guardianRedeemUnlocksAt = 0;
+
+        uint256 usdcReturned = IYOVault(yoPosition.vaultAddress).redeem(
+            sharesToRedeem, testator, address(this)
+        );
+
+        emit GuardianRedeemed(guardian, usdcReturned);
+    }
+
+    // ─── Config ───────────────────────────────────────────────────────────
+
     function updateCheckInInterval(uint256 newInterval) external onlyTestator onlyActive {
         require(newInterval >= 1 days, "Will: interval too short");
         uint256 old = checkInInterval;
@@ -258,7 +403,6 @@ contract Will is ReentrancyGuard {
         emit CheckInIntervalUpdated(old, newInterval);
     }
 
-    /// @notice Update Fileverse document ID
     function updateFileverseDoc(string calldata newDocId) external onlyTestator {
         fileverseDocId = newDocId;
         emit FileverseDocUpdated(newDocId);
@@ -289,13 +433,25 @@ contract Will is ReentrancyGuard {
         return beneficiaries.length;
     }
 
-    function totalYieldEarned() external view returns (uint256) {
-        if (depositedShares == 0) return 0;
-        try yieldVault.previewWithdraw(depositedShares) returns (uint256 currentValue) {
-            // We need to track the original deposit amount
-            return currentValue > address(this).balance
-                ? currentValue - address(this).balance
-                : 0;
+    function getYOPosition() external view returns (YOPosition memory) {
+        return yoPosition;
+    }
+
+    /// @notice Current USDC value of YO position (principal + accrued yield)
+    function currentYOValue() external view returns (uint256) {
+        if (yoPosition.sharesHeld == 0) return 0;
+        try IYOVault(yoPosition.vaultAddress).previewRedeem(yoPosition.sharesHeld) returns (uint256 v) {
+            return v;
+        } catch {
+            return yoPosition.principalUSDC;
+        }
+    }
+
+    /// @notice Net yield earned above principal
+    function yieldEarned() external view returns (uint256) {
+        if (yoPosition.sharesHeld == 0) return 0;
+        try IYOVault(yoPosition.vaultAddress).previewRedeem(yoPosition.sharesHeld) returns (uint256 current) {
+            return current > yoPosition.principalUSDC ? current - yoPosition.principalUSDC : 0;
         } catch {
             return 0;
         }
@@ -306,6 +462,20 @@ contract Will is ReentrancyGuard {
             return WillState.TRIGGERABLE;
         }
         return state;
+    }
+
+    function totalYieldEarned() external view returns (uint256) {
+        if (depositedShares == 0) return 0;
+        try yieldVault.previewWithdraw(depositedShares) returns (uint256 currentValue) {
+            return currentValue > address(this).balance ? currentValue - address(this).balance : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    /// @dev Returns true if a real USDC contract is configured
+    function _hasUSDC() internal view returns (bool) {
+        return address(usdc) != address(0);
     }
 
     receive() external payable {}

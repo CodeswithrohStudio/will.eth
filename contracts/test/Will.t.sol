@@ -23,7 +23,7 @@ contract WillTest is Test {
     function setUp() public {
         vault = new MockYieldVault();
         anonAadhaar = new MockAnonAadhaar();
-        registry = new WillRegistry(address(anonAadhaar), address(vault));
+        registry = new WillRegistry(address(anonAadhaar), address(vault), address(0));
 
         // Seed vault with yield buffer
         vm.deal(address(vault), 100 ether);

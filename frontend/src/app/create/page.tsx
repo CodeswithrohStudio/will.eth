@@ -7,6 +7,7 @@ import { useCreateWill } from '@/hooks/useWillRegistry';
 import { useDepositETH } from '@/hooks/useWill';
 import { BeneficiaryDraft, CHECK_IN_INTERVALS } from '@/lib/types';
 import { isValidAddress, isValidENS } from '@/lib/utils';
+import { projectEstate, fmtUSD } from '@/lib/yo-config';
 
 const STEPS = ['Beneficiaries', 'Check-In', 'Deposit', 'Review & Deploy'];
 
@@ -22,6 +23,10 @@ export default function CreatePage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [letterOfWishes, setLetterOfWishes] = useState('');
   const [fileverseDocId, setFileverseDocId] = useState('');
+  // YO Protocol yield toggle
+  const [yieldEnabled, setYieldEnabled] = useState(true);
+  const [yieldAsset, setYieldAsset] = useState<'USDC' | 'ETH'>('USDC');
+  const YO_APY = yieldAsset === 'USDC' ? 7.2 : 4.8;
 
   const { createWill, isPending: isCreating, isConfirming, isSuccess: isCreated, deployedWillAddress } = useCreateWill();
   const { depositETH } = useDepositETH(deployedWillAddress || undefined);
@@ -242,45 +247,110 @@ export default function CreatePage() {
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-white">Fund your estate</h2>
           <p className="text-gray-400 text-sm">
-            Deposit ETH into your will. These funds earn 5% APY in a yield vault while you&apos;re alive.
+            Deposit into your will. Enable yield to put your estate to work while you&apos;re alive.
           </p>
 
+          {/* ⚡ YO Yield Toggle */}
+          <div className={`p-4 rounded-xl border transition-all ${yieldEnabled ? 'border-purple-600 bg-purple-900/20' : 'border-gray-700 bg-gray-900/30'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⚡</span>
+                <div>
+                  <div className="font-semibold text-white text-sm">Earn yield while you&apos;re alive</div>
+                  <div className="text-xs text-gray-400">
+                    Your deposited assets earn ~{YO_APY}% APY in a YO vault on Base.
+                    When your will executes, your estate pays out <strong className="text-white">principal + all yield earned.</strong>
+                  </div>
+                </div>
+              </div>
+              {/* Toggle switch */}
+              <button
+                onClick={() => setYieldEnabled(!yieldEnabled)}
+                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${yieldEnabled ? 'bg-purple-600' : 'bg-gray-600'}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${yieldEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {yieldEnabled && (
+              <div className="flex gap-2 mt-3">
+                {(['USDC', 'ETH'] as const).map(asset => (
+                  <button
+                    key={asset}
+                    onClick={() => setYieldAsset(asset)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                      yieldAsset === asset
+                        ? 'border-purple-500 bg-purple-900/40 text-purple-300'
+                        : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                  >
+                    {asset} · {asset === 'USDC' ? '7.2%' : '4.8%'} APY
+                    {asset === 'USDC' && <span className="ml-1 text-xs text-green-400">★ Best</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Amount input */}
           <div className="p-4 rounded-xl border border-gray-700 bg-gray-900/50">
-            <label className="block text-sm text-gray-400 mb-2">Deposit amount (ETH)</label>
+            <label className="block text-sm text-gray-400 mb-2">
+              Deposit amount ({yieldEnabled && yieldAsset === 'USDC' ? 'USDC' : 'ETH'})
+            </label>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-lg">Ξ</span>
+              <span className="text-gray-400 text-lg font-mono">
+                {yieldEnabled && yieldAsset === 'USDC' ? '$' : 'Ξ'}
+              </span>
               <input
                 type="number"
-                step="0.001"
+                step={yieldEnabled && yieldAsset === 'USDC' ? '10' : '0.001'}
                 min="0"
-                placeholder="0.1"
+                placeholder={yieldEnabled && yieldAsset === 'USDC' ? '500' : '0.1'}
                 value={depositAmount}
                 onChange={e => setDepositAmount(e.target.value)}
                 className="flex-1 bg-transparent text-white text-2xl font-bold focus:outline-none"
               />
             </div>
-            {depositAmount && (
+            {depositAmount && yieldEnabled && yieldAsset !== 'USDC' && (
               <p className="text-sm text-gray-500 mt-2">
                 ≈ ${(parseFloat(depositAmount || '0') * 3000).toLocaleString()} USD
               </p>
             )}
           </div>
 
-          <div className="p-4 rounded-xl bg-green-900/20 border border-green-700/50 text-green-300 text-sm">
-            <strong>Yield projection:</strong> If you live 10 more years, your heirs receive{' '}
-            <strong>
-              {depositAmount ? (parseFloat(depositAmount) * Math.pow(1.05, 10)).toFixed(4) : '0'} ETH
-            </strong>{' '}
-            instead of {depositAmount || '0'} ETH. Your estate grows while you live.
-          </div>
+          {/* Yield projection */}
+          {yieldEnabled && depositAmount && parseFloat(depositAmount) > 0 && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-800/50">
+              <div className="text-xs text-green-400 font-semibold mb-2">📈 Your estate, compounded</div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[5, 10, 35].map(years => {
+                  const val = yieldAsset === 'USDC'
+                    ? projectEstate(parseFloat(depositAmount), YO_APY, years)
+                    : parseFloat(depositAmount) * Math.pow(1 + YO_APY / 100, years);
+                  return (
+                    <div key={years}>
+                      <div className="text-white font-bold text-sm">
+                        {yieldAsset === 'USDC' ? fmtUSD(val) : `${val.toFixed(3)} ETH`}
+                      </div>
+                      <div className="text-gray-500 text-xs">in {years}y</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                Powered by YO Protocol · Risk-adjusted onchain yield
+              </div>
+            </div>
+          )}
 
+          {/* Letter of wishes */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-300">Letter of wishes (optional)</label>
             <textarea
-              placeholder="Personal messages to your heirs, context for specific bequests, passwords to hint at, or anything you want them to know..."
+              placeholder="Personal messages to your heirs, context for specific bequests, or anything you want them to know..."
               value={letterOfWishes}
               onChange={e => setLetterOfWishes(e.target.value)}
-              rows={4}
+              rows={3}
               className="w-full px-3 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm resize-none"
             />
             <p className="text-xs text-gray-500">Encrypted and stored on Fileverse/IPFS. Only your heirs can access it after trigger.</p>
@@ -322,7 +392,21 @@ export default function CreatePage() {
 
             <div className="p-4 rounded-xl border border-gray-700 bg-gray-900/50">
               <div className="text-xs text-gray-500 mb-1">Initial Deposit</div>
-              <div className="text-white font-semibold">{depositAmount || '0'} ETH</div>
+              <div className="text-white font-semibold">
+                {depositAmount || '0'} {yieldEnabled && yieldAsset === 'USDC' ? 'USDC' : 'ETH'}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-xl border ${yieldEnabled ? 'border-purple-700 bg-purple-900/20' : 'border-gray-700 bg-gray-900/50'}`}>
+              <div className="text-xs text-gray-500 mb-1">Yield Layer</div>
+              {yieldEnabled ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-green-400 font-semibold">⚡ YO Protocol — {yieldAsset} vault</span>
+                  <span className="text-xs text-purple-400">{YO_APY}% APY on Base</span>
+                </div>
+              ) : (
+                <div className="text-gray-400">Disabled — assets held raw in will contract</div>
+              )}
             </div>
           </div>
 

@@ -9,6 +9,7 @@ contract WillRegistry {
     // ─── State ────────────────────────────────────────────────────────────
     address public immutable anonAadhaar;
     address public immutable yieldVault;
+    address public immutable usdc; // USDC token passed to each Will
 
     mapping(address => address[]) public testatorWills;
     mapping(address => bool) public isRegisteredWill;
@@ -25,21 +26,22 @@ contract WillRegistry {
     );
 
     // ─── Constructor ──────────────────────────────────────────────────────
-    constructor(address _anonAadhaar, address _yieldVault) {
+    constructor(address _anonAadhaar, address _yieldVault, address _usdc) {
         require(_anonAadhaar != address(0), "Registry: zero anonAadhaar");
         require(_yieldVault != address(0), "Registry: zero yieldVault");
         anonAadhaar = _anonAadhaar;
         yieldVault = _yieldVault;
+        usdc = _usdc; // may be address(0) on testnet — Will handles this
     }
 
     // ─── Functions ────────────────────────────────────────────────────────
 
     /// @notice Deploy a new Will contract
     /// @param beneficiaries     Array of heir wallet addresses
-    /// @param ensNames          Human-readable ENS names (parallel array, can be empty string)
-    /// @param basisPoints       Share percentages in basis points (must sum to 10000)
+    /// @param ensNames          Human-readable ENS names (parallel array)
+    /// @param basisPoints       Shares in basis points (must sum to 10000)
     /// @param checkInInterval   Seconds between required check-ins (min 1 day)
-    /// @param fileverseDocId    IPFS/Fileverse CID of the letter of wishes document
+    /// @param fileverseDocId    IPFS/Fileverse CID of the letter of wishes
     function createWill(
         address[] calldata beneficiaries,
         string[] calldata ensNames,
@@ -52,6 +54,7 @@ contract WillRegistry {
             address(this),
             yieldVault,
             anonAadhaar,
+            usdc,
             beneficiaries,
             ensNames,
             basisPoints,
