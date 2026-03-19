@@ -58,7 +58,7 @@ function StatCell({ icon, label, value, sub, highlight }: {
     amber: 'text-amber-400',
   };
   return (
-    <div className="p-4 rounded-xl bg-gray-800/60 border border-gray-700/50 flex flex-col gap-1">
+    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-1">
       <div className="text-xs text-gray-500 flex items-center gap-1.5">
         <span>{icon}</span>
         <span>{label}</span>
@@ -104,7 +104,7 @@ export function YOWillDashboard({ willAddress }: Props) {
 
   if (!yo.hasPosition && !showDeposit) {
     return (
-      <div className="rounded-2xl border border-dashed border-purple-700/60 bg-gray-900/40 p-6">
+      <div className="rounded-2xl border border-dashed border-green-700/40 bg-white/[0.02] p-6">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">⚡</span>
           <div>
@@ -115,7 +115,7 @@ export function YOWillDashboard({ willAddress }: Props) {
           </div>
           <button
             onClick={() => setShowDeposit(true)}
-            className="ml-auto px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-all"
+            className="ml-auto px-4 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-sm font-semibold transition-all"
           >
             Enable Yield
           </button>
@@ -137,9 +137,9 @@ export function YOWillDashboard({ willAddress }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-700 bg-gray-900/60 overflow-hidden">
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
       {/* Card Header */}
-      <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg">📈</span>
           <span className="font-semibold text-white text-sm">YO Yield Vault</span>
@@ -249,7 +249,7 @@ export function YOWillDashboard({ willAddress }: Props) {
       <div className="px-5 pb-5 space-y-2">
         <button
           onClick={() => setShowDeposit(!showDeposit)}
-          className="w-full py-2.5 rounded-xl border border-gray-600 text-gray-300 hover:text-white text-sm transition-colors"
+          className="w-full py-2.5 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm transition-colors"
         >
           + Add More USDC
         </button>
@@ -309,13 +309,13 @@ function DepositForm({ depositAmount, setDepositAmount, yoVaultAddr, deposit, ba
   }
 
   return (
-    <div className="p-4 rounded-xl border border-gray-700 bg-gray-800/50 space-y-3">
+    <div className="p-4 rounded-xl border border-white/[0.07] bg-white/[0.03] space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-white">Deposit USDC</span>
         <span className="text-xs text-gray-400">Balance: ${balance.formatted.toFixed(2)}</span>
       </div>
 
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-900 border border-gray-700 focus-within:border-purple-500 transition-colors">
+      <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] focus-within:border-green-500 transition-colors">
         <span className="text-gray-400 text-sm font-mono">USDC</span>
         <input
           type="number"
@@ -334,15 +334,15 @@ function DepositForm({ depositAmount, setDepositAmount, yoVaultAddr, deposit, ba
         </div>
       )}
 
-      <div className="text-xs text-gray-500 bg-gray-900/50 rounded-lg p-2">
-        <span className="text-purple-400 font-medium">2-step:</span> First approves USDC, then deposits into the YO yoUSD vault on Base.
+      <div className="text-xs text-zinc-600 bg-white/[0.02] rounded-lg p-2">
+        <span className="text-green-400 font-medium">2-step:</span> First approves USDC, then deposits into the YO yoUSD vault on Base.
       </div>
 
       {!deposit.approveSuccess ? (
         <button
           onClick={() => depositAmount && deposit.depositUSDC(yoVaultAddr, depositAmount)}
           disabled={deposit.isApproving || !depositAmount || parseFloat(depositAmount) <= 0}
-          className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold text-sm transition-all"
+          className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:bg-white/[0.06] disabled:text-zinc-600 text-white font-bold text-sm transition-all"
         >
           {deposit.isApproving
             ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Approving USDC...</span>
@@ -371,7 +371,7 @@ function GuardianSection({ willAddress, guardian }: {
   const [guardianInput, setGuardianInput] = useState('');
 
   return (
-    <div className="p-4 rounded-xl border border-gray-700 bg-gray-800/40 space-y-3 text-sm">
+    <div className="p-4 rounded-xl border border-white/[0.07] bg-white/[0.02] space-y-3 text-sm">
       <div className="font-medium text-white">⛑️ Emergency Guardian</div>
       <p className="text-xs text-gray-400">
         A guardian can emergency-redeem your YO position with a 48-hour timelock.
@@ -385,12 +385,12 @@ function GuardianSection({ willAddress, guardian }: {
             placeholder="Guardian address (0x...)"
             value={guardianInput}
             onChange={e => setGuardianInput(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white text-xs focus:outline-none focus:border-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs focus:outline-none focus:border-green-500"
           />
           <button
             onClick={() => guardianInput && guardian.setGuardian(guardianInput as `0x${string}`)}
             disabled={guardian.isSettingGuardian || !guardianInput}
-            className="w-full py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium disabled:opacity-50 transition-all"
+            className="w-full py-2 rounded-xl bg-white/[0.07] hover:bg-white/[0.1] text-white text-xs font-medium disabled:opacity-50 transition-all"
           >
             {guardian.isSettingGuardian ? 'Setting...' : 'Set Guardian'}
           </button>

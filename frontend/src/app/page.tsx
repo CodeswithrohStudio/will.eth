@@ -43,26 +43,6 @@ function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?
   return <span ref={ref}>{prefix}{value.toLocaleString()}{suffix}</span>;
 }
 
-/* ── Step card ─────────────────────────────────────────────────────────── */
-function StepCard({ num, label, title, body, accent = false }: {
-  num: string; label: string; title: string; body: string; accent?: boolean;
-}) {
-  return (
-    <div className={`card card-hover p-6 space-y-3 ${accent ? 'border-violet-600/40' : ''}`}>
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-          accent ? 'bg-violet-600 text-white' : 'bg-white/[0.06] text-zinc-400'
-        }`}>
-          {num}
-        </div>
-        <span className="text-xs font-semibold tracking-wider uppercase text-zinc-500">{label}</span>
-      </div>
-      <h3 className="text-[17px] font-semibold text-white leading-snug">{title}</h3>
-      <p className="text-sm text-zinc-400 leading-relaxed">{body}</p>
-    </div>
-  );
-}
-
 export default function LandingPage() {
   const r1 = useReveal();
   const r2 = useReveal();
@@ -77,13 +57,13 @@ export default function LandingPage() {
 
         {/* Ambient glow */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] rounded-full bg-violet-700/10 blur-[120px]" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 rounded-full bg-violet-900/8 blur-[100px]" />
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] rounded-full bg-green-500/8 blur-[130px]" />
+          <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-green-700/6 blur-[100px]" />
         </div>
 
         {/* Live badge */}
         <div className="anim-fade-up d-100 mb-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] text-zinc-400 text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
           Live on Base — permissionless, forever
         </div>
 
@@ -107,7 +87,7 @@ export default function LandingPage() {
         <div className="anim-fade-up d-500 mt-10 flex flex-col sm:flex-row gap-3 items-center">
           <Link
             href="/create"
-            className="px-8 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-[15px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-lg shadow-violet-900/40"
+            className="px-8 py-3.5 rounded-xl bg-green-500 hover:bg-green-400 text-white font-semibold text-[15px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-lg shadow-green-900/30"
           >
             Set up your will — it&apos;s free
           </Link>
@@ -170,7 +150,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
 
           <div ref={r3} className="reveal text-center mb-16">
-            <p className="text-xs font-semibold tracking-wider uppercase text-violet-400 mb-3">How it works</p>
+            <p className="text-xs font-semibold tracking-wider uppercase text-green-400 mb-3">How it works</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
               Set it once. It runs forever.
             </h2>
@@ -183,20 +163,18 @@ export default function LandingPage() {
           {/* Timeline */}
           <div className="space-y-3">
 
-            {/* Today */}
             <div className="flex gap-4 sm:gap-8 items-start">
               <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
-                <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center text-white font-bold text-sm">1</div>
+                <div className="w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center text-white font-bold text-sm">1</div>
                 <div className="w-px flex-1 bg-white/[0.06] min-h-[40px]" />
               </div>
               <div className="card card-hover p-5 flex-1 mb-3">
-                <div className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-1">Today</div>
+                <div className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-1">Today</div>
                 <h3 className="text-[16px] font-semibold text-white mb-1">You write your will</h3>
                 <p className="text-sm text-zinc-400">Enter ENS names or wallet addresses. Set percentages. Deploy to Base in under 5 minutes.</p>
               </div>
             </div>
 
-            {/* Every month */}
             <div className="flex gap-4 sm:gap-8 items-start">
               <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
                 <div className="w-9 h-9 rounded-xl bg-white/[0.07] flex items-center justify-center text-white font-bold text-sm">2</div>
@@ -205,17 +183,16 @@ export default function LandingPage() {
               <div className="card card-hover p-5 flex-1 mb-3">
                 <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Every month</div>
                 <h3 className="text-[16px] font-semibold text-white mb-1">You check in — takes 5 seconds</h3>
-                <p className="text-sm text-zinc-400">Tap the button in the app. Or reply &ldquo;ALIVE&rdquo; to a WhatsApp message. The contract resets. Your family stays protected.</p>
+                <p className="text-sm text-zinc-400">Tap the button in the app. Or reply &ldquo;ALIVE&rdquo; to a Telegram message. The contract resets. Your family stays protected.</p>
               </div>
             </div>
 
-            {/* If the worst happens */}
             <div className="flex gap-4 sm:gap-8 items-start">
               <div className="flex flex-col items-center gap-1 flex-shrink-0 mt-1">
                 <div className="w-9 h-9 rounded-xl bg-white/[0.07] flex items-center justify-center text-white font-bold text-sm">3</div>
               </div>
-              <div className="card p-5 flex-1 border-emerald-700/30">
-                <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-1">When it matters most</div>
+              <div className="card p-5 flex-1 border-green-700/30">
+                <div className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-1">When it matters most</div>
                 <h3 className="text-[16px] font-semibold text-white mb-1">Your heirs receive everything</h3>
                 <p className="text-sm text-zinc-400">If you miss two check-ins, any heir can trigger the contract. They verify identity privately with a ZK proof — no courts, no KYC, no waiting.</p>
               </div>
@@ -230,7 +207,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
 
             <div ref={r4} className="reveal space-y-5">
-              <p className="text-xs font-semibold tracking-wider uppercase text-violet-400">While you&apos;re alive</p>
+              <p className="text-xs font-semibold tracking-wider uppercase text-green-400">While you&apos;re alive</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-snug">
                 Your estate grows<br />while you sleep.
               </h2>
@@ -241,12 +218,12 @@ export default function LandingPage() {
               <div className="space-y-3">
                 {[
                   { label: '7.2% APY on USDC', sub: 'Stable, USD-denominated yield' },
-                  { label: '4.8% APY on ETH', sub: 'Denominated in native ETH' },
-                  { label: 'Non-custodial', sub: 'Your keys. Your vault. Always.' },
+                  { label: '4.8% APY on ETH',  sub: 'Denominated in native ETH' },
+                  { label: 'Non-custodial',     sub: 'Your keys. Your vault. Always.' },
                 ].map(item => (
                   <div key={item.label} className="flex items-start gap-3">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <div className="w-4 h-4 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-white">{item.label}</div>
@@ -274,11 +251,11 @@ export default function LandingPage() {
                   <div key={row.years} className="space-y-1">
                     <div className="flex justify-between text-xs text-zinc-400">
                       <span>In {row.years} years</span>
-                      <span className="text-emerald-400 font-semibold num">${row.val.toLocaleString()}</span>
+                      <span className="text-green-400 font-semibold num">${row.val.toLocaleString()}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-600 to-emerald-500"
+                        className="h-full rounded-full bg-gradient-to-r from-green-600 to-green-400"
                         style={{ width: `${row.bar}%` }}
                       />
                     </div>
@@ -297,12 +274,12 @@ export default function LandingPage() {
           <p className="text-xs font-semibold tracking-wider uppercase text-zinc-500 mb-8">Built on infrastructure you can trust</p>
           <div className="flex flex-wrap justify-center gap-3">
             {[
-              { name: 'Base', badge: 'L2 execution' },
+              { name: 'Base',         badge: 'L2 execution' },
               { name: 'Anon Aadhaar', badge: 'ZK identity' },
-              { name: 'ENS', badge: 'Human-readable heirs' },
-              { name: 'YO Protocol', badge: 'Yield on Base' },
-              { name: 'Fileverse', badge: 'Encrypted docs' },
-              { name: 'WhatsApp', badge: 'Non-crypto check-ins' },
+              { name: 'ENS',          badge: 'Human-readable heirs' },
+              { name: 'YO Protocol',  badge: 'Yield on Base' },
+              { name: 'Fileverse',    badge: 'Encrypted docs' },
+              { name: 'Telegram',     badge: 'Non-crypto check-ins' },
             ].map(t => (
               <div key={t.name} className="px-4 py-2.5 rounded-xl card flex flex-col items-center gap-0.5">
                 <div className="text-sm font-semibold text-white">{t.name}</div>
@@ -326,7 +303,7 @@ export default function LandingPage() {
           <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/create"
-              className="px-10 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-[16px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-2xl shadow-violet-900/50"
+              className="px-10 py-4 rounded-xl bg-green-500 hover:bg-green-400 text-white font-bold text-[16px] transition-all hover:scale-[1.03] active:scale-[0.97] shadow-2xl shadow-green-900/30"
             >
               Create Your Will — Free
             </Link>

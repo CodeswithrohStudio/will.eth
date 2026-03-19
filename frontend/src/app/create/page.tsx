@@ -11,25 +11,25 @@ import { projectEstate, fmtUSD } from '@/lib/yo-config';
 import Link from 'next/link';
 
 const STEPS = [
-  { id: 0, label: 'Heirs',      hint: 'Who are you protecting?' },
-  { id: 1, label: 'Check-in',   hint: 'How often will you check in?' },
-  { id: 2, label: 'Fund',       hint: 'How much to put in?' },
-  { id: 3, label: 'Deploy',     hint: 'Review & go live' },
+  { id: 0, label: 'Heirs',    hint: 'Who are you protecting?' },
+  { id: 1, label: 'Check-in', hint: 'How often will you check in?' },
+  { id: 2, label: 'Fund',     hint: 'How much to put in?' },
+  { id: 3, label: 'Deploy',   hint: 'Review & go live' },
 ];
 
-/* ── Pill step indicator ─────────────────────────────────────────────── */
+/* ── Pill step bar ───────────────────────────────────────────────────── */
 function StepBar({ current }: { current: number }) {
   return (
     <div className="flex items-center gap-2 mb-12">
       {STEPS.map((s, i) => (
         <div key={s.id} className="flex items-center gap-2">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-            i < current  ? 'bg-violet-600/20 text-violet-400' :
-            i === current ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' :
+            i < current  ? 'bg-green-500/20 text-green-400' :
+            i === current ? 'bg-green-500 text-white shadow-lg shadow-green-900/30' :
                             'text-zinc-600'
           }`}>
             {i < current ? (
-              <span className="w-3.5 h-3.5 rounded-full bg-violet-500 flex items-center justify-center text-[9px]">✓</span>
+              <span className="w-3.5 h-3.5 rounded-full bg-green-400 flex items-center justify-center text-[9px] text-black">✓</span>
             ) : (
               <span className="w-3.5 h-3.5 rounded-full border border-current flex items-center justify-center text-[9px]">{i + 1}</span>
             )}
@@ -42,11 +42,11 @@ function StepBar({ current }: { current: number }) {
   );
 }
 
-/* ── Yield projection mini table ─────────────────────────────────────── */
+/* ── Yield projection table ──────────────────────────────────────────── */
 function YieldTable({ amount, apy, asset }: { amount: number; apy: number; asset: 'USDC' | 'ETH' }) {
   if (!amount) return null;
   return (
-    <div className="grid grid-cols-3 gap-2 text-center mt-4 p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/40">
+    <div className="grid grid-cols-3 gap-2 text-center mt-4 p-4 rounded-xl bg-green-950/30 border border-green-800/30">
       {[5, 10, 35].map(years => {
         const val = asset === 'USDC'
           ? projectEstate(amount, apy, years)
@@ -71,7 +71,6 @@ export default function CreatePage() {
   const { isConnected } = useAccount();
   const [step, setStep] = useState(0);
 
-  // Form state
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryDraft[]>([
     { address: '', ensName: '', percentage: 100, ensResolved: false },
   ]);
@@ -93,11 +92,7 @@ export default function CreatePage() {
     const remaining = 100 - totalPercentage;
     setBeneficiaries([...beneficiaries, { address: '', ensName: '', percentage: remaining > 0 ? remaining : 0, ensResolved: false }]);
   };
-
-  const removeBeneficiary = (idx: number) => {
-    setBeneficiaries(beneficiaries.filter((_, i) => i !== idx));
-  };
-
+  const removeBeneficiary = (idx: number) => setBeneficiaries(beneficiaries.filter((_, i) => i !== idx));
   const updateBeneficiary = (idx: number, field: keyof BeneficiaryDraft, value: string | number | boolean) => {
     const updated = [...beneficiaries];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,7 +130,7 @@ export default function CreatePage() {
     createWill(addrs, names, bps, interval, docId);
   };
 
-  /* ── Not connected ───────────────────────────────────────────────── */
+  /* ── Not connected ─────────────────────────────────────────────── */
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-5 gap-8 text-center">
@@ -151,7 +146,6 @@ export default function CreatePage() {
   return (
     <div className="max-w-xl mx-auto px-5 py-16">
 
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">{STEPS[step].hint}</h1>
         <p className="text-zinc-500 text-sm mt-1">Step {step + 1} of {STEPS.length}</p>
@@ -170,9 +164,7 @@ export default function CreatePage() {
             {beneficiaries.map((b, idx) => (
               <div key={idx} className="card p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                    Person {idx + 1}
-                  </span>
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Person {idx + 1}</span>
                   {beneficiaries.length > 1 && (
                     <button onClick={() => removeBeneficiary(idx)} className="text-zinc-600 hover:text-red-400 text-xs transition-colors">
                       Remove
@@ -196,10 +188,10 @@ export default function CreatePage() {
                         updateBeneficiary(idx, 'ensResolved', false);
                       }
                     }}
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500/60 text-sm transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-600 focus:outline-none focus:border-green-500/60 text-sm transition-colors"
                   />
                   {b.ensResolved && b.address && (
-                    <p className="text-xs text-emerald-500 font-mono pl-1">✓ {b.address}</p>
+                    <p className="text-xs text-green-400 font-mono pl-1">✓ {b.address}</p>
                   )}
                   {b.ensName && !b.ensResolved && (
                     <p className="text-xs text-zinc-500 pl-1">Resolving ENS…</p>
@@ -224,7 +216,6 @@ export default function CreatePage() {
             ))}
           </div>
 
-          {/* Percentage validation */}
           {totalPercentage !== 100 && (
             <div className="flex items-center gap-2 text-sm text-amber-400 px-1">
               <span>⚠</span>
@@ -244,7 +235,7 @@ export default function CreatePage() {
           <button
             onClick={() => setStep(1)}
             disabled={totalPercentage !== 100 || beneficiaries.some(b => !b.address)}
-            className="w-full py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:bg-white/[0.05] disabled:text-zinc-600 text-white font-semibold transition-all"
+            className="w-full py-3.5 rounded-xl bg-green-500 hover:bg-green-400 disabled:bg-white/[0.05] disabled:text-zinc-600 text-white font-semibold transition-all"
           >
             Continue →
           </button>
@@ -256,7 +247,7 @@ export default function CreatePage() {
         <div className="space-y-6">
           <p className="text-zinc-400 text-sm leading-relaxed">
             Pick a window you can realistically keep. If you miss it — your heirs can trigger your will.
-            WhatsApp reminders go out 3 days before each deadline.
+            Telegram reminders go out 3 days before each deadline.
           </p>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -266,28 +257,32 @@ export default function CreatePage() {
                 onClick={() => setCheckInInterval(opt.value)}
                 className={`p-4 rounded-xl border text-left transition-all ${
                   checkInInterval === opt.value
-                    ? 'border-violet-500 bg-violet-600/10 text-white'
+                    ? 'border-green-500 bg-green-500/10 text-white'
                     : 'border-white/[0.07] bg-white/[0.02] text-zinc-400 hover:border-white/[0.12] hover:text-zinc-200'
                 }`}
               >
                 <div className="font-semibold text-sm">{opt.label}</div>
                 {opt.label === '30 days' && (
-                  <div className="text-xs text-violet-400 mt-0.5">Recommended</div>
+                  <div className="text-xs text-green-400 mt-0.5">Recommended</div>
                 )}
               </button>
             ))}
           </div>
 
-          <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-800/30 text-amber-300/80 text-sm flex gap-3">
-            <span className="flex-shrink-0">💬</span>
-            <span>You&apos;ll get a WhatsApp reminder 3 days before each deadline. Reply <strong className="text-amber-200">ALIVE</strong> — that counts as a check-in.</span>
+          <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/[0.06] text-zinc-400 text-sm flex gap-3">
+            <span className="text-lg flex-shrink-0">✈️</span>
+            <span>
+              You&apos;ll get a <strong className="text-white">Telegram</strong> reminder 3 days before each deadline.
+              Reply <span className="font-mono text-green-400">ALIVE</span> — that counts as a check-in.
+              No app needed.
+            </span>
           </div>
 
           <div className="flex gap-3">
             <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white transition-colors text-sm">
               ← Back
             </button>
-            <button onClick={() => setStep(2)} className="flex-1 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all">
+            <button onClick={() => setStep(2)} className="flex-1 py-3.5 rounded-xl bg-green-500 hover:bg-green-400 text-white font-semibold transition-all">
               Continue →
             </button>
           </div>
@@ -303,7 +298,7 @@ export default function CreatePage() {
           </p>
 
           {/* Yield toggle */}
-          <div className={`card p-5 space-y-4 transition-all ${yieldEnabled ? 'border-violet-600/40' : ''}`}>
+          <div className={`card p-5 space-y-4 transition-all ${yieldEnabled ? 'border-green-600/30' : ''}`}>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-white">Earn yield while alive</div>
@@ -311,7 +306,7 @@ export default function CreatePage() {
               </div>
               <button
                 onClick={() => setYieldEnabled(!yieldEnabled)}
-                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${yieldEnabled ? 'bg-violet-600' : 'bg-white/[0.1]'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${yieldEnabled ? 'bg-green-500' : 'bg-white/[0.1]'}`}
               >
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${yieldEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </button>
@@ -325,12 +320,12 @@ export default function CreatePage() {
                     onClick={() => setYieldAsset(asset)}
                     className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-all ${
                       yieldAsset === asset
-                        ? 'border-violet-500 bg-violet-600/10 text-violet-300'
+                        ? 'border-green-500 bg-green-500/10 text-green-300'
                         : 'border-white/[0.07] text-zinc-500 hover:border-white/[0.12]'
                     }`}
                   >
                     {asset}
-                    <span className={`ml-1 text-xs ${asset === 'USDC' ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                    <span className={`ml-1 text-xs ${asset === 'USDC' ? 'text-green-400' : 'text-zinc-400'}`}>
                       {asset === 'USDC' ? '7.2% APY ★' : '4.8% APY'}
                     </span>
                   </button>
@@ -359,7 +354,6 @@ export default function CreatePage() {
             <p className="text-xs text-zinc-600 mt-2">You can skip this and deposit later from the dashboard.</p>
           </div>
 
-          {/* Projection */}
           {yieldEnabled && depositAmount && parseFloat(depositAmount) > 0 && (
             <YieldTable amount={parseFloat(depositAmount)} apy={YO_APY} asset={yieldAsset} />
           )}
@@ -374,7 +368,7 @@ export default function CreatePage() {
               value={letterOfWishes}
               onChange={e => setLetterOfWishes(e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500/50 text-sm resize-none transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.07] text-white placeholder-zinc-700 focus:outline-none focus:border-green-500/50 text-sm resize-none transition-colors"
             />
             <p className="text-xs text-zinc-600">Encrypted on Fileverse/IPFS. Only your heirs can access it after the will triggers.</p>
           </div>
@@ -383,7 +377,7 @@ export default function CreatePage() {
             <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white transition-colors text-sm">
               ← Back
             </button>
-            <button onClick={() => setStep(3)} className="flex-1 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all">
+            <button onClick={() => setStep(3)} className="flex-1 py-3.5 rounded-xl bg-green-500 hover:bg-green-400 text-white font-semibold transition-all">
               Review →
             </button>
           </div>
@@ -395,7 +389,6 @@ export default function CreatePage() {
         <div className="space-y-5">
           <p className="text-zinc-400 text-sm">Everything looks right? Deploy your will onchain — it&apos;s permanent.</p>
 
-          {/* Summary */}
           <div className="card divide-y divide-white/[0.05]">
             <div className="p-4">
               <div className="text-xs text-zinc-500 mb-2 font-semibold uppercase tracking-wider">Heirs</div>
@@ -421,7 +414,7 @@ export default function CreatePage() {
             <div className="p-4 flex justify-between items-center">
               <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Yield</span>
               {yieldEnabled ? (
-                <span className="text-emerald-400 text-sm font-semibold">⚡ YO Protocol — {yieldAsset} · {YO_APY}% APY</span>
+                <span className="text-green-400 text-sm font-semibold">⚡ YO Protocol — {yieldAsset} · {YO_APY}% APY</span>
               ) : (
                 <span className="text-zinc-500 text-sm">Disabled</span>
               )}
@@ -433,7 +426,7 @@ export default function CreatePage() {
               <button
                 onClick={handleDeploy}
                 disabled={isCreating || isConfirming}
-                className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:bg-white/[0.05] disabled:text-zinc-600 text-white font-bold text-[16px] transition-all"
+                className="w-full py-4 rounded-xl bg-green-500 hover:bg-green-400 disabled:bg-white/[0.05] disabled:text-zinc-600 text-white font-bold text-[16px] transition-all"
               >
                 {isCreating ? (
                   <span className="flex items-center justify-center gap-2">
@@ -454,8 +447,8 @@ export default function CreatePage() {
               </button>
             </>
           ) : (
-            <div className="card p-8 text-center space-y-4 border-emerald-700/40">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-3xl mx-auto">
+            <div className="card p-8 text-center space-y-4 border-green-700/30">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-3xl mx-auto">
                 ✓
               </div>
               <div>
@@ -474,7 +467,7 @@ export default function CreatePage() {
                 >
                   View on Basescan ↗
                 </a>
-                <Link href="/dashboard" className="block w-full py-3 rounded-xl bg-white text-black font-bold hover:bg-zinc-100 transition-colors text-sm">
+                <Link href="/dashboard" className="block w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 text-white font-bold transition-colors text-sm">
                   Go to Dashboard
                 </Link>
               </div>

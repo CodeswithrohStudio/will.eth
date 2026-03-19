@@ -23,7 +23,7 @@ export default function Nav() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-violet-900/40 group-hover:bg-violet-500 transition-colors">
+            <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-green-900/40 group-hover:bg-green-400 transition-colors">
               W
             </div>
             <span className="font-semibold text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
