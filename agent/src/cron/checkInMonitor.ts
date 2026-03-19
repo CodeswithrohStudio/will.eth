@@ -1,14 +1,13 @@
 import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
-import Database from 'better-sqlite3';
 import { config } from '../config';
+import { registrationsCol, reminderLogCol } from '../db/mongo';
 import { sendCheckInReminder, sendTriggerAlert, sendCheckInConfirmation } from '../telegram/telegramBot';
 import { reverseResolve } from '../ens/resolver';
 
 const REGISTRY_ABI = parseAbi([
   'function getAllWills() view returns (address[])',
-  'function isRegisteredWill(address) view returns (bool)',
 ]);
 
 const WILL_ABI = parseAbi([
@@ -22,83 +21,51 @@ const WILL_ABI = parseAbi([
   'function checkIn()',
 ]);
 
-const WillState = {
-  ACTIVE: 0,
-  TRIGGERABLE: 1,
-  DISTRIBUTING: 2,
-  REVOKED: 3,
-} as const;
-
-let db: Database.Database;
-
-/* ── DB init ─────────────────────────────────────────────────────────── */
-export function initDB(dbPath: string) {
-  db = new Database(dbPath);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS telegram_registrations (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      wallet_address TEXT NOT NULL UNIQUE,
-      chat_id        TEXT NOT NULL,
-      created_at     INTEGER DEFAULT (strftime('%s', 'now'))
-    );
-    CREATE TABLE IF NOT EXISTS reminder_log (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      will_address TEXT NOT NULL,
-      chat_id      TEXT NOT NULL,
-      sent_at      INTEGER DEFAULT (strftime('%s', 'now')),
-      days_remaining INTEGER
-    );
-  `);
-  console.log('[DB] Initialized at', dbPath);
-}
+const WillState = { ACTIVE: 0, TRIGGERABLE: 1, DISTRIBUTING: 2, REVOKED: 3 } as const;
 
 /* ── Registration ────────────────────────────────────────────────────── */
-export function registerChatId(walletAddress: string, chatId: string) {
-  db.prepare(
-    'INSERT OR REPLACE INTO telegram_registrations (wallet_address, chat_id) VALUES (?, ?)'
-  ).run(walletAddress.toLowerCase(), chatId);
+export async function registerChatId(walletAddress: string, chatId: string) {
+  const col = await registrationsCol();
+  await col.updateOne(
+    { walletAddress: walletAddress.toLowerCase() },
+    { $set: { walletAddress: walletAddress.toLowerCase(), chatId, createdAt: new Date() } },
+    { upsert: true }
+  );
   console.log(`[DB] Registered chatId ${chatId} for wallet ${walletAddress}`);
 }
 
-export function getChatIdForWallet(walletAddress: string): string | null {
-  const row = db.prepare(
-    'SELECT chat_id FROM telegram_registrations WHERE wallet_address = ?'
-  ).get(walletAddress.toLowerCase()) as { chat_id: string } | undefined;
-  return row?.chat_id || null;
+export async function getChatIdForWallet(walletAddress: string): Promise<string | null> {
+  const col = await registrationsCol();
+  const doc = await col.findOne({ walletAddress: walletAddress.toLowerCase() });
+  return doc?.chatId ?? null;
 }
 
-export function getWalletForChatId(chatId: string): string | null {
-  const row = db.prepare(
-    'SELECT wallet_address FROM telegram_registrations WHERE chat_id = ?'
-  ).get(chatId) as { wallet_address: string } | undefined;
-  return row?.wallet_address || null;
+export async function getWalletForChatId(chatId: string): Promise<string | null> {
+  const col = await registrationsCol();
+  const doc = await col.findOne({ chatId });
+  return doc?.walletAddress ?? null;
 }
 
 /* ── Reminder dedup ──────────────────────────────────────────────────── */
-function wasRecentlyReminded(willAddress: string, daysWithin: number): boolean {
-  const cutoff = Math.floor(Date.now() / 1000) - daysWithin * 24 * 60 * 60;
-  const row = db.prepare(
-    'SELECT id FROM reminder_log WHERE will_address = ? AND sent_at > ?'
-  ).get(willAddress, cutoff);
-  return !!row;
+async function wasRecentlyReminded(willAddress: string, daysWithin: number): Promise<boolean> {
+  const col = await reminderLogCol();
+  const cutoff = new Date(Date.now() - daysWithin * 24 * 60 * 60 * 1000);
+  const doc = await col.findOne({ willAddress, sentAt: { $gt: cutoff } });
+  return !!doc;
 }
 
-function logReminder(willAddress: string, chatId: string, daysRemaining: number) {
-  db.prepare(
-    'INSERT INTO reminder_log (will_address, chat_id, days_remaining) VALUES (?, ?, ?)'
-  ).run(willAddress, chatId, daysRemaining);
+async function logReminder(willAddress: string, chatId: string, daysRemaining: number) {
+  const col = await reminderLogCol();
+  await col.insertOne({ willAddress, chatId, sentAt: new Date(), daysRemaining });
 }
 
-/* ── ALIVE message handler (called by Telegram bot handler) ──────────── */
+/* ── ALIVE handler ───────────────────────────────────────────────────── */
 export async function processAliveMessage(chatId: string): Promise<void> {
-  const walletAddress = getWalletForChatId(chatId);
+  const walletAddress = await getWalletForChatId(chatId);
   if (!walletAddress) {
     console.log(`[Monitor] ALIVE from unregistered chatId ${chatId}`);
     return;
   }
-
-  // Send confirmation — actual on-chain check-in is done via the dashboard
-  // (bot doesn't hold a relayer key in basic setup; user taps "Check In" in app)
   const nextDeadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   await sendCheckInConfirmation(chatId, nextDeadline);
   console.log(`[Monitor] Processed ALIVE from ${walletAddress}`);
@@ -137,20 +104,18 @@ export async function runCheckInMonitor() {
       ]);
 
       const now = Math.floor(Date.now() / 1000);
-      const deadline = Number(deadlineTs);
-      const daysRemaining = Math.ceil((deadline - now) / 86400);
-
-      const testatorChatId = getChatIdForWallet(testator);
+      const daysRemaining = Math.ceil((Number(deadlineTs) - now) / 86400);
+      const testatorChatId = await getChatIdForWallet(testator);
 
       // Remind testator if deadline approaching
       if ((state === WillState.ACTIVE || state === WillState.TRIGGERABLE) && testatorChatId) {
         const shouldRemind =
-          (daysRemaining <= 7 && !wasRecentlyReminded(willAddress, 3)) ||
-          (daysRemaining <= 1 && !wasRecentlyReminded(willAddress, 1));
+          (daysRemaining <= 7 && !(await wasRecentlyReminded(willAddress, 3))) ||
+          (daysRemaining <= 1 && !(await wasRecentlyReminded(willAddress, 1)));
 
         if (shouldRemind) {
           await sendCheckInReminder(testatorChatId, willAddress, Math.max(0, daysRemaining));
-          logReminder(willAddress, testatorChatId, daysRemaining);
+          await logReminder(willAddress, testatorChatId, daysRemaining);
           console.log(`[Monitor] Sent reminder for ${willAddress} (${daysRemaining} days)`);
         }
       }
@@ -158,11 +123,12 @@ export async function runCheckInMonitor() {
       // Notify heirs if distributing
       if (state === WillState.DISTRIBUTING) {
         for (const b of beneficiaries) {
-          const heirChatId = getChatIdForWallet(b.wallet);
-          if (heirChatId && !b.hasClaimed && !wasRecentlyReminded(`${willAddress}-${b.wallet}`, 1)) {
+          const heirChatId = await getChatIdForWallet(b.wallet);
+          const key = `${willAddress}-${b.wallet}`;
+          if (heirChatId && !b.hasClaimed && !(await wasRecentlyReminded(key, 1))) {
             const ensName = b.ensName || await reverseResolve(b.wallet) || b.wallet;
             await sendTriggerAlert(heirChatId, willAddress, [ensName]);
-            logReminder(`${willAddress}-${b.wallet}`, heirChatId, 0);
+            await logReminder(key, heirChatId, 0);
           }
         }
       }
@@ -176,9 +142,7 @@ export async function runCheckInMonitor() {
 
 /* ── On-chain check-in via relayer ───────────────────────────────────── */
 export async function relayCheckIn(willAddress: `0x${string}`) {
-  if (!config.baseSepolia.relayerKey) {
-    throw new Error('No relayer key configured');
-  }
+  if (!config.baseSepolia.relayerKey) throw new Error('No relayer key configured');
 
   const account = privateKeyToAccount(config.baseSepolia.relayerKey);
   const walletClient = createWalletClient({

@@ -13,5 +13,5 @@ export const config = {
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN!,
   },
-  dbPath: process.env.AGENT_DB_PATH || './agent.db',
+  mongoUri: process.env.MONGO_URI!,
 };

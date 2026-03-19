@@ -2,33 +2,26 @@ import express from 'express';
 import cron from 'node-cron';
 import { config } from './config';
 import {
-  initDB,
   runCheckInMonitor,
   registerChatId,
   processAliveMessage,
   getWalletForChatId,
 } from './cron/checkInMonitor';
-import { getBot, sendCheckInConfirmation } from './telegram/telegramBot';
+import { getBot, sendWelcome } from './telegram/telegramBot';
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Initialize DB
-initDB(config.dbPath);
 
 // Start Telegram bot (long polling)
 const bot = getBot();
 
 /* ── Telegram message handlers ─────────────────────────────────────── */
 
-// /start
 bot.onText(/\/start/, async (msg) => {
-  const { sendWelcome } = await import('./telegram/telegramBot');
   await sendWelcome(String(msg.chat.id));
 });
 
-// /help
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
@@ -41,9 +34,8 @@ bot.onText(/\/help/, (msg) => {
   );
 });
 
-// /status
-bot.onText(/\/status/, (msg) => {
-  const wallet = getWalletForChatId(String(msg.chat.id));
+bot.onText(/\/status/, async (msg) => {
+  const wallet = await getWalletForChatId(String(msg.chat.id));
   if (wallet) {
     bot.sendMessage(msg.chat.id, `✅ Registered wallet:\n\`${wallet}\``, { parse_mode: 'MarkdownV2' });
   } else {
@@ -51,16 +43,15 @@ bot.onText(/\/status/, (msg) => {
   }
 });
 
-// /dashboard
 bot.onText(/\/dashboard/, (msg) => {
   bot.sendMessage(msg.chat.id, 'Open your dashboard: https://willeth.xyz/dashboard');
 });
 
-// Wallet address registration — matches 0x... addresses
-bot.onText(/^(0x[a-fA-F0-9]{40})$/, (msg, match) => {
+// Wallet address registration
+bot.onText(/^(0x[a-fA-F0-9]{40})$/, async (msg, match) => {
   const chatId = String(msg.chat.id);
   const walletAddress = match![1];
-  registerChatId(walletAddress, chatId);
+  await registerChatId(walletAddress, chatId);
   bot.sendMessage(
     msg.chat.id,
     `✅ *Wallet registered\\!*\n\n` +
@@ -73,19 +64,17 @@ bot.onText(/^(0x[a-fA-F0-9]{40})$/, (msg, match) => {
 
 // ALIVE → check-in confirmation
 bot.onText(/^ALIVE$/i, async (msg) => {
-  const chatId = String(msg.chat.id);
   try {
-    await processAliveMessage(chatId);
+    await processAliveMessage(String(msg.chat.id));
   } catch (err) {
     console.error('[Bot] Error processing ALIVE:', err);
     bot.sendMessage(msg.chat.id, '❌ Something went wrong. Please try again or check in via the dashboard.');
   }
 });
 
-// Generic unknown message
+// Fallback
 bot.on('message', (msg) => {
   const text = msg.text || '';
-  // Skip if it was handled above
   if (/^\//.test(text) || /^0x[a-fA-F0-9]{40}$/.test(text) || /^ALIVE$/i.test(text)) return;
   bot.sendMessage(
     msg.chat.id,
@@ -100,17 +89,15 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// Register wallet → chatId mapping (called from frontend if needed)
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   const { walletAddress, chatId } = req.body;
   if (!walletAddress || !chatId) {
     return res.status(400).json({ error: 'walletAddress and chatId required' });
   }
-  registerChatId(walletAddress, chatId);
-  res.json({ success: true, message: `Chat ID registered for ${walletAddress}` });
+  await registerChatId(walletAddress, chatId);
+  res.json({ success: true });
 });
 
-// Manual monitor trigger (for testing)
 app.post('/monitor/run', async (_req, res) => {
   runCheckInMonitor().catch(console.error);
   res.json({ success: true, message: 'Monitor run started' });
@@ -122,7 +109,6 @@ cron.schedule('0 */6 * * *', () => {
   runCheckInMonitor().catch(console.error);
 });
 
-// Run once on startup after short delay
 setTimeout(() => {
   console.log('[Startup] Running initial monitor check...');
   runCheckInMonitor().catch(console.error);
@@ -130,7 +116,7 @@ setTimeout(() => {
 
 app.listen(config.port, () => {
   console.log(`[Agent] will.eth agent running on port ${config.port}`);
-  console.log(`[Agent] Telegram bot active (long polling)`);
+  console.log(`[Agent] Telegram bot active`);
   console.log(`[Agent] Registry: ${config.contracts.registry}`);
 });
 
