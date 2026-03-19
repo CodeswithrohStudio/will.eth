@@ -61,12 +61,6 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-green-700/6 blur-[100px]" />
         </div>
 
-        {/* Live badge */}
-        <div className="anim-fade-up d-100 mb-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] text-zinc-400 text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
-          Live on Base — permissionless, forever
-        </div>
-
         {/* Main headline */}
         <h1 className="anim-fade-up d-200 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white leading-[1.05] max-w-3xl">
           Your crypto<br />
