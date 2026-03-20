@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useCreateWill } from '@/hooks/useWillRegistry';
@@ -134,9 +135,12 @@ export default function CreatePage() {
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-5 gap-8 text-center">
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold text-white">First, connect your wallet.</h1>
-          <p className="text-zinc-400 max-w-sm">Your will is tied to your wallet address. Connect to continue.</p>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-12 h-12 text-zinc-600" strokeWidth="1.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3m18 0V6" />
+        </svg>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-white">Connect your wallet first</h1>
+          <p className="text-zinc-500 max-w-xs text-sm">Your will is deployed from your wallet address. No account needed — just a signature.</p>
         </div>
         <ConnectButton />
       </div>
@@ -447,10 +451,8 @@ export default function CreatePage() {
               </button>
             </>
           ) : (
-            <div className="card p-8 text-center space-y-4 border-green-700/30">
-              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-3xl mx-auto">
-                ✓
-              </div>
+            <div className="card p-8 text-center space-y-5 border-green-700/30 glow-green">
+              <Image src="/logo.svg" alt="" width={52} height={65} className="mx-auto opacity-90" />
               <div>
                 <div className="text-xl font-bold text-white">Will deployed.</div>
                 <p className="text-zinc-400 text-sm mt-1">Your family is now protected. Check in monthly to keep it active.</p>

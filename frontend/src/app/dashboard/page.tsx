@@ -311,17 +311,27 @@ export default function DashboardPage() {
       </div>
 
       {/* Telegram callout */}
-      <div className="mb-8 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] flex gap-3 items-start">
-        <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-lg flex-shrink-0">
-          ✈️
+      <div className="mb-8 p-4 rounded-xl border border-sky-700/25 bg-sky-950/20 flex gap-3 items-center">
+        <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center flex-shrink-0">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-sky-400">
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.927 13.62l-2.96-.924c-.643-.203-.658-.643.136-.953l11.57-4.461c.537-.194 1.006.131.836.94h-.575z"/>
+          </svg>
         </div>
-        <div>
-          <div className="text-sm font-semibold text-white">Check in by Telegram</div>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Message <span className="text-white font-mono">@willeth_bot</span> on Telegram with your wallet address to register.
-            Reply <span className="text-green-400 font-mono">ALIVE</span> anytime — counts as a check-in. No app needed.
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white">Check in without opening the app</div>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Message <span className="text-white font-mono text-[11px] bg-white/[0.07] px-1.5 py-0.5 rounded">@willeth_bot</span> on Telegram · Send your wallet to register · Reply{' '}
+            <span className="text-green-400 font-mono text-[11px] bg-green-950/50 px-1.5 py-0.5 rounded">ALIVE</span> to check in.
           </p>
         </div>
+        <a
+          href="https://t.me/willeth_bot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-500/25 text-sky-400 text-xs font-semibold hover:bg-sky-500/25 transition-colors"
+        >
+          Open ↗
+        </a>
       </div>
 
       {/* Will list */}
@@ -330,17 +340,23 @@ export default function DashboardPage() {
           <div className="w-7 h-7 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !wills || wills.length === 0 ? (
-        <div className="text-center py-24 space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-3xl mx-auto">
-            ⚖️
+        <div className="text-center py-24 space-y-5">
+          <div className="relative inline-block">
+            <div className="w-20 h-20 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-9 h-9 text-zinc-600" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+              </svg>
+            </div>
           </div>
-          <h2 className="text-xl font-semibold text-white">No wills yet</h2>
-          <p className="text-zinc-500 max-w-sm mx-auto">Set up your first will and protect your family in under 5 minutes.</p>
+          <div>
+            <h2 className="text-xl font-semibold text-white">No wills yet</h2>
+            <p className="text-zinc-500 max-w-xs mx-auto mt-1 text-sm">Protect your family in under 5 minutes. Your wallet, your rules.</p>
+          </div>
           <Link
             href="/create"
-            className="inline-flex px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-white font-semibold transition-all mt-2"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-white font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-green-900/25"
           >
-            Create Your First Will
+            <span>+</span> Create Your First Will
           </Link>
         </div>
       ) : (

@@ -67,12 +67,12 @@ function ClaimContent() {
   if (!willAddress) {
     return (
       <div className="max-w-md mx-auto px-5 py-16 text-center space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-3xl mx-auto">
-          🔗
-        </div>
-        <h1 className="text-2xl font-bold text-white">No will address</h1>
-        <p className="text-zinc-400 text-sm max-w-xs mx-auto">
-          Use the link sent to you — either from the testator or from the will.eth Telegram bot notification.
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-10 h-10 text-zinc-600 mx-auto" strokeWidth="1.3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+        </svg>
+        <h1 className="text-2xl font-bold text-white">No will link</h1>
+        <p className="text-zinc-500 text-sm max-w-xs mx-auto">
+          Open the link sent to you by the testator or the will.eth Telegram bot notification — it contains the will address.
         </p>
       </div>
     );
@@ -88,11 +88,14 @@ function ClaimContent() {
   return (
     <div className="max-w-lg mx-auto px-5 py-16 space-y-8">
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold tracking-wider uppercase text-zinc-500">Someone left this for you</p>
-        <h1 className="text-3xl font-bold text-white">Claim your inheritance</h1>
-        <p className="text-zinc-400 text-sm">
-          Verify your identity privately with Anon Aadhaar. No personal data is stored or revealed on-chain.
+      <div className="space-y-3">
+        <p className="text-xs font-semibold tracking-wider uppercase text-green-500/70">Someone left this for you</p>
+        <h1 className="text-3xl font-bold text-white leading-tight">
+          Claim your<br /><span className="grad-text">inheritance</span>
+        </h1>
+        <p className="text-zinc-400 text-sm leading-relaxed">
+          Verify your identity privately with Anon Aadhaar — a ZK proof.
+          No personal data is stored or revealed on-chain, ever.
         </p>
       </div>
 
@@ -166,10 +169,12 @@ function ClaimContent() {
               <p className="text-zinc-500 text-sm">Your share has been transferred to your wallet.</p>
             </div>
           ) : isSuccess ? (
-            <div className="card p-8 text-center space-y-3 border-green-700/25">
-              <div className="text-4xl">🎉</div>
-              <div className="text-green-400 font-bold text-xl">Inheritance claimed!</div>
-              <p className="text-zinc-500 text-sm">Your ETH is on its way to your wallet.</p>
+            <div className="card p-10 text-center space-y-4 border-green-700/25 glow-green">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-3xl mx-auto">🕊️</div>
+              <div>
+                <div className="text-green-400 font-bold text-xl">Inheritance claimed</div>
+                <p className="text-zinc-500 text-sm mt-1">The funds are on their way to your wallet. They wanted you to have this.</p>
+              </div>
             </div>
           ) : (
             <>

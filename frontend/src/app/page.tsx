@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 /* ── Reveal-on-scroll hook ─────────────────────────────────────────────── */
@@ -59,6 +60,17 @@ export default function LandingPage() {
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] rounded-full bg-green-500/8 blur-[130px]" />
           <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-green-700/6 blur-[100px]" />
+        </div>
+
+        {/* Logo mark */}
+        <div className="anim-fade-up d-100 mb-8">
+          <Image
+            src="/logo.svg"
+            alt="will.eth"
+            width={64}
+            height={80}
+            className="mx-auto anim-float opacity-90"
+          />
         </div>
 
         {/* Main headline */}
@@ -308,7 +320,6 @@ export default function LandingPage() {
               View Dashboard
             </Link>
           </div>
-          <p className="text-xs text-zinc-600 pt-2">Permissionless · Open source · Onchain forever</p>
         </div>
       </section>
 
